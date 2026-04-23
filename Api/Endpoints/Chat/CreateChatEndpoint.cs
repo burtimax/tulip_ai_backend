@@ -23,8 +23,7 @@ public sealed class CreateChatEndpoint : Endpoint<CreateChatRequest, CreateChatR
     {
         if (req.UserId == Guid.Empty)
         {
-            HttpContext.Response.StatusCode = 400;
-            await HttpContext.Response.WriteAsJsonAsync(new { error = "userId is required" }, ct);
+            await ChatEndpointErrors.WriteValidationErrorAsync(HttpContext, "userId is required", cancellationToken: ct);
             return;
         }
 

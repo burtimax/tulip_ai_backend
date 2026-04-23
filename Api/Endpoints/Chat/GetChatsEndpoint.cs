@@ -23,8 +23,7 @@ public sealed class GetChatsEndpoint : EndpointWithoutRequest<ChatListResponse>
     {
         if (!Guid.TryParse(Query<string>("userId"), out var userId) || userId == Guid.Empty)
         {
-            HttpContext.Response.StatusCode = 400;
-            await HttpContext.Response.WriteAsJsonAsync(new { error = "userId is required" }, ct);
+            await ChatEndpointErrors.WriteValidationErrorAsync(HttpContext, "userId is required", cancellationToken: ct);
             return;
         }
 
@@ -34,6 +33,8 @@ public sealed class GetChatsEndpoint : EndpointWithoutRequest<ChatListResponse>
 
         await SendAsync(new ChatListResponse
         {
+            Skip = skip,
+            Take = take,
             Items = chats.Select(x => new ChatItemDto
             {
                 ChatId = x.Id,
@@ -42,7 +43,8 @@ public sealed class GetChatsEndpoint : EndpointWithoutRequest<ChatListResponse>
                 Status = x.Status.ToString(),
                 CreatedAt = x.CreatedAt,
                 UpdatedAt = x.UpdatedAt,
-                LastMessageAt = x.LastMessageAt
+                LastMessageAt = x.LastMessageAt,
+                IsProcessing = string.Equals(x.Status.ToString(), "Processing", StringComparison.Ordinal)
             }).ToList()
         }, cancellation: ct);
     }

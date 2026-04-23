@@ -25,7 +25,7 @@ public sealed class GetChatByIdEndpoint : EndpointWithoutRequest<ChatItemDto>
         var chat = await _chatService.GetChatAsync(chatId, ct);
         if (chat is null)
         {
-            await SendNotFoundAsync(ct);
+            await ChatEndpointErrors.WriteNotFoundAsync(HttpContext, "chat not found", ct);
             return;
         }
 
@@ -37,7 +37,8 @@ public sealed class GetChatByIdEndpoint : EndpointWithoutRequest<ChatItemDto>
             Status = chat.Status.ToString(),
             CreatedAt = chat.CreatedAt,
             UpdatedAt = chat.UpdatedAt,
-            LastMessageAt = chat.LastMessageAt
+            LastMessageAt = chat.LastMessageAt,
+            IsProcessing = string.Equals(chat.Status.ToString(), "Processing", StringComparison.Ordinal)
         }, cancellation: ct);
     }
 }

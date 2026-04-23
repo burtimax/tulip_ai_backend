@@ -16,6 +16,8 @@ public sealed class CreateChatResponse
 public sealed class ChatListResponse
 {
     public required IReadOnlyList<ChatItemDto> Items { get; init; }
+    public int Skip { get; init; }
+    public int Take { get; init; }
 }
 
 public sealed class ChatItemDto
@@ -27,6 +29,7 @@ public sealed class ChatItemDto
     public required DateTimeOffset CreatedAt { get; init; }
     public DateTimeOffset? UpdatedAt { get; init; }
     public DateTimeOffset? LastMessageAt { get; init; }
+    public bool IsProcessing { get; init; }
 }
 
 public sealed class SendMessageRequest
@@ -54,7 +57,12 @@ public sealed class SendMessageResponse
 
 public sealed class MessagesResponse
 {
+    public required Guid ChatId { get; init; }
+    public required string ChatStatus { get; init; }
+    public bool IsChatProcessing { get; init; }
     public required IReadOnlyList<MessageDto> Items { get; init; }
+    public int Skip { get; init; }
+    public int Take { get; init; }
 }
 
 public sealed class MessageDto
@@ -65,6 +73,8 @@ public sealed class MessageDto
     public string? TextHtml { get; init; }
     public string? FailureCode { get; init; }
     public string? FailureReason { get; init; }
+    public bool HasProcessingError { get; init; }
+    public bool CanRetry { get; init; }
     public required DateTimeOffset CreatedAt { get; init; }
     public required IReadOnlyList<MessageImageDto> Images { get; init; }
 }
