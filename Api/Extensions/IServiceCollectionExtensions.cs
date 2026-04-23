@@ -16,6 +16,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using ModuleLLM.Configuration;
+using ModulePlantId.Configuration;
 using Quartz;
 using Shared.Configs;
 using Shared.Contracts;
@@ -41,7 +44,7 @@ public static class IServiceCollectionExtensions
 
     public static void AddServices(this IServiceCollection services, IConfiguration configuration)
     {
-        services.Configure<ProcessorJobOptions>(configuration.GetSection(ProcessorJobOptions.SectionName));
+        services.AddValidatedOptions(configuration);
 
         services.AddJwt(configuration);
         services.AddScoped<IUserService, UserService>();
@@ -58,10 +61,63 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<ILlmUsageJournal, LlmUsageJournalService>();
     }
 
+    private static void AddValidatedOptions(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOptions<ProcessorJobOptions>()
+            .Bind(configuration.GetSection(ProcessorJobOptions.SectionName))
+            .Validate(
+                x => x.MaxParallelGenerations > 0,
+                $"{ProcessorJobOptions.SectionName}:MaxParallelGenerations must be greater than 0")
+            .ValidateOnStart();
+
+        services.AddOptions<ChatQueueConfiguration>()
+            .Bind(configuration.GetSection(ChatQueueConfiguration.Section))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddOptions<ChatStorageConfiguration>()
+            .Bind(configuration.GetSection(ChatStorageConfiguration.Section))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddOptions<OpenRouterApiConfiguration>()
+            .Bind(configuration.GetSection(OpenRouterApiConfiguration.Section))
+            .Validate(
+                x => !string.IsNullOrWhiteSpace(x.BaseUrl) && Uri.IsWellFormedUriString(x.BaseUrl, UriKind.Absolute),
+                $"{OpenRouterApiConfiguration.Section}:BaseUrl must be an absolute URI")
+            .Validate(
+                x => x.Timeout > 0,
+                $"{OpenRouterApiConfiguration.Section}:Timeout must be greater than 0")
+            .ValidateOnStart();
+
+        services.AddOptions<PlantIdApiConfiguration>()
+            .Bind(configuration.GetSection(PlantIdApiConfiguration.Section))
+            .Validate(
+                x => !string.IsNullOrWhiteSpace(x.BaseUrl) && Uri.IsWellFormedUriString(x.BaseUrl, UriKind.Absolute),
+                $"{PlantIdApiConfiguration.Section}:BaseUrl must be an absolute URI")
+            .Validate(
+                x => !string.IsNullOrWhiteSpace(x.AnalyzeEndpoint),
+                $"{PlantIdApiConfiguration.Section}:AnalyzeEndpoint is required")
+            .ValidateOnStart();
+
+        services.AddOptions<ProxyConfiguration>()
+            .Bind(configuration.GetSection(ProxyConfiguration.Section))
+            .Validate(
+                x => !x.Enabled || (!string.IsNullOrWhiteSpace(x.Host) && x.Port > 0),
+                $"{ProxyConfiguration.Section}:Host and Port are required when Enabled=true")
+            .ValidateOnStart();
+    }
+
     public static AppConfiguration AddConfigurations(this IServiceCollection services, IConfiguration configuration)
     {
         AppConfiguration config = configuration.Get<AppConfiguration>();
         if(config == null) throw new NullReferenceException(nameof(config));
+        if (string.IsNullOrWhiteSpace(config.Database?.AppDbConnection))
+            throw new OptionsValidationException(
+                nameof(AppConfiguration),
+                typeof(AppConfiguration),
+                new[] { "Database:AppDbConnection is required and must be set via environment variables or secrets." });
+
         services.AddSingleton(config);
 
         return config;

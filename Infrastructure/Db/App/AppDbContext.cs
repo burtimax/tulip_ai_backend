@@ -19,8 +19,11 @@ public partial class AppDbContext : DbContext
     public DbSet<UserEntity> Users => Set<UserEntity>();
     public DbSet<StatEventEntity> StatEvents => Set<StatEventEntity>();
     public DbSet<LlmUsageEntity> LlmUsages => Set<LlmUsageEntity>();
-
     public DbSet<LogEntity> Logs => Set<LogEntity>();
+    public DbSet<ChatEntity> Chats => Set<ChatEntity>();
+    public DbSet<MessageEntity> Messages => Set<MessageEntity>();
+    public DbSet<MessageImageEntity> MessageImages => Set<MessageImageEntity>();
+    public DbSet<ProcessingJobEntity> ProcessingJobs => Set<ProcessingJobEntity>();
 
 
     protected override void OnModelCreating(ModelBuilder builder)

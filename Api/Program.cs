@@ -1,7 +1,6 @@
 using System;
 using Api.Extensions;
 using Api.Middleware;
-using Application.Extensions;
 using Application.Services.BootstrapDatabase;
 using Application.Extensions;
 using ModuleTelegramLogger.Extensions;
@@ -107,11 +106,11 @@ if (app.Environment.IsDevelopment())
     // OpenAPI документация доступна только в режиме разработки
     app.MapOpenApi();
 }
-else
-{
-    // В production используем middleware для обработки исключений
-    app.UseMiddleware<ResponseExceptionMiddleware>();
-}
+
+// Единая обработка ошибок API с контрактом ответа
+app.UseMiddleware<ResponseExceptionMiddleware>();
+// Корреляция запросов по chatId/messageId/jobId + correlationId
+app.UseMiddleware<RequestCorrelationMiddleware>();
 
 // Настройка CORS политики
 app.UseCors(builder =>

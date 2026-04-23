@@ -51,6 +51,10 @@ public partial class AppDbContext
         // Прикладные таблицы
         builder.Entity<StatEventEntity>().ToTable("stat_events", statSchema);
         builder.Entity<LlmUsageEntity>().ToTable("llm_usages", statSchema);
+        builder.Entity<ChatEntity>().ToTable("chats", appSchema);
+        builder.Entity<MessageEntity>().ToTable("messages", appSchema);
+        builder.Entity<MessageImageEntity>().ToTable("message_images", appSchema);
+        builder.Entity<ProcessingJobEntity>().ToTable("processing_jobs", appSchema);
     }
 
     /// <summary>
@@ -110,5 +114,78 @@ public partial class AppDbContext
         builder.Entity<LlmUsageEntity>()
             .Property(e => e.InputJson)
             .HasColumnType("jsonb");
+
+        builder.Entity<MessageImageEntity>()
+            .Property(e => e.PlantIdRawJson)
+            .HasColumnType("jsonb");
+
+        builder.Entity<MessageImageEntity>()
+            .Property(e => e.PlantIdNormalizedJson)
+            .HasColumnType("jsonb");
+
+        builder.Entity<ChatEntity>()
+            .Property(e => e.Status)
+            .HasConversion<string>()
+            .HasMaxLength(32);
+
+        builder.Entity<MessageEntity>()
+            .Property(e => e.Role)
+            .HasConversion<string>()
+            .HasMaxLength(32);
+
+        builder.Entity<MessageEntity>()
+            .Property(e => e.Status)
+            .HasConversion<string>()
+            .HasMaxLength(32);
+
+        builder.Entity<ProcessingJobEntity>()
+            .Property(e => e.Status)
+            .HasConversion<string>()
+            .HasMaxLength(32);
+
+        builder.Entity<ChatEntity>()
+            .HasOne(e => e.User)
+            .WithMany()
+            .HasForeignKey(e => e.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<MessageEntity>()
+            .HasOne(e => e.Chat)
+            .WithMany(e => e.Messages)
+            .HasForeignKey(e => e.ChatId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<MessageImageEntity>()
+            .HasOne(e => e.Message)
+            .WithMany(e => e.Images)
+            .HasForeignKey(e => e.MessageId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<ProcessingJobEntity>()
+            .HasOne(e => e.Chat)
+            .WithMany(e => e.ProcessingJobs)
+            .HasForeignKey(e => e.ChatId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<ProcessingJobEntity>()
+            .HasOne(e => e.Message)
+            .WithMany(e => e.ProcessingJobs)
+            .HasForeignKey(e => e.MessageId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<ChatEntity>()
+            .HasIndex(e => new { e.UserId, e.UpdatedAt })
+            .IsDescending(false, true);
+
+        builder.Entity<MessageEntity>()
+            .HasIndex(e => new { e.ChatId, e.CreatedAt });
+
+        builder.Entity<ProcessingJobEntity>()
+            .HasIndex(e => new { e.Status, e.CreatedAt });
+
+        builder.Entity<MessageEntity>()
+            .HasIndex(e => e.ClientRequestId)
+            .IsUnique()
+            .HasFilter("\"client_request_id\" IS NOT NULL");
     }
 }

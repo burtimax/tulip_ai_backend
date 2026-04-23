@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FastEndpoints;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Shared.Contracts;
-using Shared.Extensions;
-using Shared.Models;
 
 namespace Api.Middleware;
 
@@ -58,12 +55,16 @@ public class ResponseExceptionMiddleware
     /// <param name="exception">Перехваченное исключение</param>
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
-        // Логируем полную информацию об ошибке
+        var correlationId = context.Items.TryGetValue(RequestCorrelationMiddleware.CorrelationHeader, out var rawCorrelationId)
+            ? rawCorrelationId?.ToString()
+            : null;
+
         _logger.LogError(exception,
-            "Необработанное исключение при обработке запроса {Method} {Path}. TraceId: {TraceId}",
+            "Необработанное исключение при обработке запроса {Method} {Path}. TraceId: {TraceId}. CorrelationId: {CorrelationId}",
             context.Request.Method,
             context.Request.Path,
-            context.TraceIdentifier);
+            context.TraceIdentifier,
+            correlationId);
 
         // В development возвращаем детальную информацию об ошибке
         // В production возвращаем только общее сообщение (для безопасности)
@@ -71,29 +72,18 @@ public class ResponseExceptionMiddleware
             ? exception.Message.ToString()
             : "Произошла внутренняя ошибка сервера. Пожалуйста, обратитесь к администратору.";
 
-        if (exception is GatewayException)
+        var contract = new ApiErrorContract
         {
-            errorMessage = exception.Message;
-        }
-
-        // var errorDetail = new
-        // {
-        //     message = exception.Message,
-        //     stackTrace = exception.StackTrace,
-        //     innerException = exception.InnerException?.Message
-        // };
-
-        var errorDetail = _environment.IsDevelopment()
-            ? new
+            Error = new ApiErrorBody
             {
-                message = exception.Message,
-                stackTrace = exception.StackTrace,
-                innerException = exception.InnerException?.Message
+                Code = "internal_error",
+                Message = errorMessage,
+                TraceId = context.TraceIdentifier,
+                CorrelationId = correlationId
             }
-            : null;
+        };
 
-        await context.Response.SendAsync(
-            Result.Failure(errorDetail?.ToJson() ?? errorMessage),
-            StatusCodes.Status500InternalServerError);
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        await context.Response.WriteAsJsonAsync(contract);
     }
 }
