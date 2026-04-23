@@ -52,6 +52,11 @@
         <AutoGen>True</AutoGen>
         <DependentUpon>Strings.ru.resx</DependentUpon>
       </Compile>
+      <Compile Remove="Endpoints\User\CreatePlantIdentification\CreatePlantIdentificationRequest.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Endpoints\User\CreatePlantIdentification\" />
     </ItemGroup>
 
 </Project>

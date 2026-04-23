@@ -27,4 +27,8 @@
       <Folder Include="Db\App\Migrations\" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Compile Remove="Db\App\Entities\PlantIdentificationEntity.cs" />
+    </ItemGroup>
+
 </Project>

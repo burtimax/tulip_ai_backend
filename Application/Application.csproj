@@ -26,4 +26,13 @@
       <ProjectReference Include="..\Shared\Shared.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Compile Remove="Services\PlantIdentification\PlantIdentificationService.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Models\PlantIdentification\" />
+      <Folder Include="Services\PlantIdentification\" />
+    </ItemGroup>
+
 </Project>
