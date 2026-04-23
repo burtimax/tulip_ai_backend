@@ -1,11 +1,13 @@
 using Application.Services.Chat;
 using FastEndpoints;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using Shared.Configs;
+using Shared.Contracts;
 
 namespace Api.Endpoints.Chat;
 
-public sealed class SendMessageEndpoint : Endpoint<SendMessageRequest, SendMessageResponse>
+public sealed class SendMessageEndpoint : Endpoint<SendMessageRequest, Result<SendMessageResponse>>
 {
     private readonly IChatService _chatService;
     private readonly ChatStorageConfiguration _storageOptions;
@@ -20,7 +22,7 @@ public sealed class SendMessageEndpoint : Endpoint<SendMessageRequest, SendMessa
     {
         Post("/{chatId:guid}/messages");
         Group<ChatGroupEndpoints>();
-        AllowAnonymous();
+        AllowFileUploads();
     }
 
     public override async Task HandleAsync(SendMessageRequest req, CancellationToken ct)
@@ -34,7 +36,7 @@ public sealed class SendMessageEndpoint : Endpoint<SendMessageRequest, SendMessa
         }
 
         var sanitizedHtml = ChatHtmlSanitizer.Sanitize(req.TextHtml);
-        var images = req.Images ?? new List<IncomingImageDto>();
+        var images = req.Images ?? new List<IFormFile>();
 
         if (string.IsNullOrWhiteSpace(sanitizedHtml) && images.Count == 0)
         {
@@ -57,26 +59,35 @@ public sealed class SendMessageEndpoint : Endpoint<SendMessageRequest, SendMessa
         var incomingImages = new List<ChatIncomingImage>();
         foreach (var image in images)
         {
-            if (string.IsNullOrWhiteSpace(image.DataUrl) || string.IsNullOrWhiteSpace(image.MimeType))
+            if (image.Length <= 0)
             {
                 await ChatEndpointErrors.WriteValidationErrorAsync(
                     HttpContext,
-                    "Each image must contain dataUrl and mimeType",
+                    "Each image must be non-empty",
                     cancellationToken: ct);
                 return;
             }
 
-            if (!_storageOptions.AllowedMimeTypes.Contains(image.MimeType, StringComparer.OrdinalIgnoreCase))
+            if (string.IsNullOrWhiteSpace(image.ContentType))
             {
                 await ChatEndpointErrors.WriteValidationErrorAsync(
                     HttpContext,
-                    $"Unsupported mimeType: {image.MimeType}",
+                    "Each image must contain a mime type",
+                    cancellationToken: ct);
+                return;
+            }
+
+            if (!_storageOptions.AllowedMimeTypes.Contains(image.ContentType, StringComparer.OrdinalIgnoreCase))
+            {
+                await ChatEndpointErrors.WriteValidationErrorAsync(
+                    HttpContext,
+                    $"Unsupported mimeType: {image.ContentType}",
                     cancellationToken: ct);
                 return;
             }
 
             var maxSizeBytes = _storageOptions.MaxImageSizeMb * 1024L * 1024L;
-            if (image.SizeBytes <= 0 || image.SizeBytes > maxSizeBytes)
+            if (image.Length > maxSizeBytes)
             {
                 await ChatEndpointErrors.WriteValidationErrorAsync(
                     HttpContext,
@@ -85,13 +96,19 @@ public sealed class SendMessageEndpoint : Endpoint<SendMessageRequest, SendMessa
                 return;
             }
 
+            await using var memoryStream = new MemoryStream();
+            await image.CopyToAsync(memoryStream, ct);
+            var bytes = memoryStream.ToArray();
+            var base64 = Convert.ToBase64String(bytes);
+            var dataUrl = $"data:{image.ContentType};base64,{base64}";
+
             incomingImages.Add(new ChatIncomingImage
             {
-                DataUrl = image.DataUrl.Trim(),
-                MimeType = image.MimeType.Trim().ToLowerInvariant(),
-                SizeBytes = image.SizeBytes,
-                Width = image.Width,
-                Height = image.Height
+                DataUrl = dataUrl,
+                MimeType = image.ContentType.Trim().ToLowerInvariant(),
+                SizeBytes = image.Length,
+                Width = null,
+                Height = null
             });
         }
 
@@ -102,11 +119,11 @@ public sealed class SendMessageEndpoint : Endpoint<SendMessageRequest, SendMessa
             req.ClientRequestId,
             ct);
 
-        await SendAsync(new SendMessageResponse
+        await SendAsync(new Result<SendMessageResponse>(new SendMessageResponse
         {
             MessageId = message.Id,
             Status = message.Status.ToString(),
             CreatedAt = message.CreatedAt
-        }, 202, ct);
+        }), 202, ct);
     }
 }

@@ -1,13 +1,15 @@
 using Infrastructure.Db.App.Entities;
+using Infrastructure.Models;
 
 namespace Application.Services.Chat;
 
 public interface IChatService
 {
     Task<ChatEntity> CreateChatAsync(Guid userId, string? title, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<ChatEntity>> GetChatsAsync(Guid userId, int skip, int take, CancellationToken cancellationToken = default);
+    Task<PagedList<ChatEntity>> GetChatsAsync(Guid userId, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
     Task<ChatEntity?> GetChatAsync(Guid chatId, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<MessageEntity>> GetMessagesAsync(Guid chatId, int skip, int take, CancellationToken cancellationToken = default);
+    Task<PagedList<MessageEntity>> GetMessagesAsync(Guid chatId, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
+    Task<MessageEntity?> GetMessageAsync(Guid messageId, CancellationToken cancellationToken = default);
     Task<MessageEntity> EnqueueMessageAsync(
         Guid chatId,
         string? textHtml,

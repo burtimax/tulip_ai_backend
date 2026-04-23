@@ -1,9 +1,12 @@
 using Application.Services.Chat;
 using FastEndpoints;
+using Infrastructure.Db.App.Entities;
+using Infrastructure.Models;
+using Shared.Contracts;
 
 namespace Api.Endpoints.Chat;
 
-public sealed class GetMessagesEndpoint : EndpointWithoutRequest<MessagesResponse>
+public sealed class GetMessagesEndpoint : Endpoint<GetMessagesRequest, Result<PagedList<MessageEntity>>>
 {
     private readonly IChatService _chatService;
 
@@ -16,12 +19,11 @@ public sealed class GetMessagesEndpoint : EndpointWithoutRequest<MessagesRespons
     {
         Get("/{chatId:guid}/messages");
         Group<ChatGroupEndpoints>();
-        AllowAnonymous();
     }
 
-    public override async Task HandleAsync(CancellationToken ct)
+    public override async Task HandleAsync(GetMessagesRequest req, CancellationToken ct)
     {
-        var chatId = Route<Guid>("chatId");
+        var chatId = req.ChatId;
         var chat = await _chatService.GetChatAsync(chatId, ct);
         if (chat is null)
         {
@@ -29,38 +31,9 @@ public sealed class GetMessagesEndpoint : EndpointWithoutRequest<MessagesRespons
             return;
         }
 
-        var skip = Math.Max(0, Query<int?>("skip") ?? 0);
-        var take = Math.Clamp(Query<int?>("take") ?? 100, 1, 500);
-        var messages = await _chatService.GetMessagesAsync(chatId, skip, take, ct);
-
-        await SendAsync(new MessagesResponse
-        {
-            ChatId = chat.Id,
-            ChatStatus = chat.Status.ToString(),
-            IsChatProcessing = string.Equals(chat.Status.ToString(), "Processing", StringComparison.Ordinal),
-            Skip = skip,
-            Take = take,
-            Items = messages.Select(x => new MessageDto
-            {
-                MessageId = x.Id,
-                Role = x.Role.ToString(),
-                Status = x.Status.ToString(),
-                TextHtml = x.TextHtml,
-                FailureCode = x.FailureCode,
-                FailureReason = x.FailureReason,
-                HasProcessingError = x.Status == Infrastructure.Db.App.Entities.MessageStatus.Failed,
-                CanRetry = x.Status == Infrastructure.Db.App.Entities.MessageStatus.Failed && x.Role == Infrastructure.Db.App.Entities.MessageRole.User,
-                CreatedAt = x.CreatedAt,
-                Images = x.Images.OrderBy(i => i.SortOrder).Select(i => new MessageImageDto
-                {
-                    Id = i.Id,
-                    MimeType = i.MimeType,
-                    SizeBytes = i.SizeBytes,
-                    Width = i.Width,
-                    Height = i.Height,
-                    SortOrder = i.SortOrder
-                }).ToList()
-            }).ToList()
-        }, cancellation: ct);
+        var pageNumber = Math.Max(1, req.PageNumber);
+        var pageSize = Math.Clamp(req.PageSize, 1, 500);
+        var messages = await _chatService.GetMessagesAsync(chatId, pageNumber, pageSize, ct);
+        await SendAsync(new(messages), cancellation: ct);
     }
 }

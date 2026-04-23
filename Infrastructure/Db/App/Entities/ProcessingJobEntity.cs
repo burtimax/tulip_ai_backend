@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Db.App.Entities;
@@ -15,6 +16,7 @@ public sealed class ProcessingJobEntity : BaseEntity
     [Comment("Идентификатор сообщения")]
     public Guid MessageId { get; set; }
 
+    [JsonIgnore]
     public MessageEntity Message { get; set; } = null!;
 
     [Comment("Статус задачи")]

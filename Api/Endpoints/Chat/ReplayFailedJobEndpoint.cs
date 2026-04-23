@@ -1,9 +1,10 @@
 using Application.Services.Chat;
 using FastEndpoints;
+using Shared.Contracts;
 
 namespace Api.Endpoints.Chat;
 
-public sealed class ReplayFailedJobEndpoint : EndpointWithoutRequest
+public sealed class ReplayFailedJobEndpoint : Endpoint<ReplayFailedJobRequest, Result<ReplayFailedJobResponse>>
 {
     private readonly IChatService _chatService;
 
@@ -16,19 +17,21 @@ public sealed class ReplayFailedJobEndpoint : EndpointWithoutRequest
     {
         Post("/jobs/{jobId:guid}/replay");
         Group<ChatGroupEndpoints>();
-        AllowAnonymous();
     }
 
-    public override async Task HandleAsync(CancellationToken ct)
+    public override async Task HandleAsync(ReplayFailedJobRequest req, CancellationToken ct)
     {
-        var jobId = Route<Guid>("jobId");
-        var replayed = await _chatService.ReplayFailedJobAsync(jobId, ct);
+        var replayed = await _chatService.ReplayFailedJobAsync(req.JobId, ct);
         if (!replayed)
         {
             await ChatEndpointErrors.WriteNotFoundAsync(HttpContext, "failed job not found", ct);
             return;
         }
 
-        await HttpContext.Response.WriteAsJsonAsync(new { jobId, status = "Queued" }, ct);
+        await SendAsync(new(new ReplayFailedJobResponse
+        {
+            JobId = req.JobId,
+            Status = "Queued"
+        }), cancellation: ct);
     }
 }

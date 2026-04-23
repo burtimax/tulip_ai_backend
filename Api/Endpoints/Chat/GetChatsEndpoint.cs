@@ -1,9 +1,13 @@
+using Api.Extensions;
 using Application.Services.Chat;
 using FastEndpoints;
+using Infrastructure.Db.App.Entities;
+using Infrastructure.Models;
+using Shared.Contracts;
 
 namespace Api.Endpoints.Chat;
 
-public sealed class GetChatsEndpoint : EndpointWithoutRequest<ChatListResponse>
+public sealed class GetChatsEndpoint : Endpoint<GetChatsRequest, Result<PagedList<ChatEntity>>>
 {
     private readonly IChatService _chatService;
 
@@ -16,36 +20,14 @@ public sealed class GetChatsEndpoint : EndpointWithoutRequest<ChatListResponse>
     {
         Get("/");
         Group<ChatGroupEndpoints>();
-        AllowAnonymous();
     }
 
-    public override async Task HandleAsync(CancellationToken ct)
+    public override async Task HandleAsync(GetChatsRequest req, CancellationToken ct)
     {
-        if (!Guid.TryParse(Query<string>("userId"), out var userId) || userId == Guid.Empty)
-        {
-            await ChatEndpointErrors.WriteValidationErrorAsync(HttpContext, "userId is required", cancellationToken: ct);
-            return;
-        }
-
-        var skip = Math.Max(0, Query<int?>("skip") ?? 0);
-        var take = Math.Clamp(Query<int?>("take") ?? 50, 1, 200);
-        var chats = await _chatService.GetChatsAsync(userId, skip, take, ct);
-
-        await SendAsync(new ChatListResponse
-        {
-            Skip = skip,
-            Take = take,
-            Items = chats.Select(x => new ChatItemDto
-            {
-                ChatId = x.Id,
-                UserId = x.UserId,
-                Title = x.Title,
-                Status = x.Status.ToString(),
-                CreatedAt = x.CreatedAt,
-                UpdatedAt = x.UpdatedAt,
-                LastMessageAt = x.LastMessageAt,
-                IsProcessing = string.Equals(x.Status.ToString(), "Processing", StringComparison.Ordinal)
-            }).ToList()
-        }, cancellation: ct);
+        var userId = HttpContext.TokenData().UserId;
+        var pageNumber = Math.Max(1, req.PageNumber);
+        var pageSize = Math.Clamp(req.PageSize, 1, 200);
+        var chats = await _chatService.GetChatsAsync(userId, pageNumber, pageSize, ct);
+        await SendAsync(new(chats), cancellation: ct);
     }
 }

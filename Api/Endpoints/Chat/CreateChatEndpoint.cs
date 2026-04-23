@@ -1,9 +1,10 @@
 using Application.Services.Chat;
 using FastEndpoints;
+using Shared.Contracts;
 
 namespace Api.Endpoints.Chat;
 
-public sealed class CreateChatEndpoint : Endpoint<CreateChatRequest, CreateChatResponse>
+public sealed class CreateChatEndpoint : Endpoint<CreateChatRequest, Result<CreateChatResponse>>
 {
     private readonly IChatService _chatService;
 
@@ -28,11 +29,11 @@ public sealed class CreateChatEndpoint : Endpoint<CreateChatRequest, CreateChatR
         }
 
         var chat = await _chatService.CreateChatAsync(req.UserId, req.Title, ct);
-        await SendAsync(new CreateChatResponse
+        await SendAsync(new Result<CreateChatResponse>(new CreateChatResponse
         {
             ChatId = chat.Id,
             Status = chat.Status.ToString(),
             CreatedAt = chat.CreatedAt
-        }, cancellation: ct);
+        }), cancellation: ct);
     }
 }

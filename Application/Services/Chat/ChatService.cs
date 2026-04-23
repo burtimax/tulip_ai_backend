@@ -1,5 +1,6 @@
 using Infrastructure.Db.App;
 using Infrastructure.Db.App.Entities;
+using Infrastructure.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Shared.Configs;
@@ -32,15 +33,18 @@ public sealed class ChatService : IChatService
         return chat;
     }
 
-    public async Task<IReadOnlyList<ChatEntity>> GetChatsAsync(Guid userId, int skip, int take, CancellationToken cancellationToken = default)
+    public async Task<PagedList<ChatEntity>> GetChatsAsync(
+        Guid userId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Chats
+        var query = _dbContext.Chats
             .AsNoTracking()
             .Where(x => x.UserId == userId)
-            .OrderByDescending(x => x.UpdatedAt ?? x.CreatedAt)
-            .Skip(skip)
-            .Take(take)
-            .ToListAsync(cancellationToken);
+            .OrderByDescending(x => x.UpdatedAt ?? x.CreatedAt);
+
+        return await PagedList<ChatEntity>.ToPagedListAsync(query, pageNumber, pageSize);
     }
 
     public Task<ChatEntity?> GetChatAsync(Guid chatId, CancellationToken cancellationToken = default)
@@ -50,16 +54,27 @@ public sealed class ChatService : IChatService
             .FirstOrDefaultAsync(x => x.Id == chatId, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<MessageEntity>> GetMessagesAsync(Guid chatId, int skip, int take, CancellationToken cancellationToken = default)
+    public async Task<PagedList<MessageEntity>> GetMessagesAsync(
+        Guid chatId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Messages
+        var query = _dbContext.Messages
             .AsNoTracking()
             .Include(x => x.Images.OrderBy(i => i.SortOrder))
             .Where(x => x.ChatId == chatId)
-            .OrderBy(x => x.CreatedAt)
-            .Skip(skip)
-            .Take(take)
-            .ToListAsync(cancellationToken);
+            .OrderBy(x => x.CreatedAt);
+
+        return await PagedList<MessageEntity>.ToPagedListAsync(query, pageNumber, pageSize);
+    }
+
+    public Task<MessageEntity?> GetMessageAsync(Guid messageId, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Messages
+            .AsNoTracking()
+            .Include(x => x.Images.OrderBy(i => i.SortOrder))
+            .FirstOrDefaultAsync(x => x.Id == messageId, cancellationToken);
     }
 
     public async Task<MessageEntity> EnqueueMessageAsync(

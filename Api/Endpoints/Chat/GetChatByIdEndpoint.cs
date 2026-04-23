@@ -1,9 +1,10 @@
 using Application.Services.Chat;
 using FastEndpoints;
+using Shared.Contracts;
 
 namespace Api.Endpoints.Chat;
 
-public sealed class GetChatByIdEndpoint : EndpointWithoutRequest<ChatItemDto>
+public sealed class GetChatByIdEndpoint : Endpoint<GetChatByIdRequest, Result<ChatItemDto>>
 {
     private readonly IChatService _chatService;
 
@@ -19,17 +20,16 @@ public sealed class GetChatByIdEndpoint : EndpointWithoutRequest<ChatItemDto>
         AllowAnonymous();
     }
 
-    public override async Task HandleAsync(CancellationToken ct)
+    public override async Task HandleAsync(GetChatByIdRequest req, CancellationToken ct)
     {
-        var chatId = Route<Guid>("chatId");
-        var chat = await _chatService.GetChatAsync(chatId, ct);
+        var chat = await _chatService.GetChatAsync(req.ChatId, ct);
         if (chat is null)
         {
             await ChatEndpointErrors.WriteNotFoundAsync(HttpContext, "chat not found", ct);
             return;
         }
 
-        await SendAsync(new ChatItemDto
+        await SendAsync(new Result<ChatItemDto>(new ChatItemDto
         {
             ChatId = chat.Id,
             UserId = chat.UserId,
@@ -39,6 +39,6 @@ public sealed class GetChatByIdEndpoint : EndpointWithoutRequest<ChatItemDto>
             UpdatedAt = chat.UpdatedAt,
             LastMessageAt = chat.LastMessageAt,
             IsProcessing = string.Equals(chat.Status.ToString(), "Processing", StringComparison.Ordinal)
-        }, cancellation: ct);
+        }), cancellation: ct);
     }
 }

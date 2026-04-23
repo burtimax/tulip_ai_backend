@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Db.App.Entities;
@@ -10,6 +11,7 @@ public sealed class MessageEntity : BaseEntity
     [Comment("Идентификатор чата")]
     public Guid ChatId { get; set; }
 
+    [JsonIgnore]
     public ChatEntity Chat { get; set; } = null!;
 
     [Comment("Роль отправителя")]
