@@ -1,16 +1,20 @@
 using Infrastructure.Db.App;
 using Infrastructure.Db.App.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Shared.Configs;
 
 namespace Application.Services.Chat;
 
 public sealed class ChatService : IChatService
 {
     private readonly AppDbContext _dbContext;
+    private readonly ChatQueueConfiguration _queueOptions;
 
-    public ChatService(AppDbContext dbContext)
+    public ChatService(AppDbContext dbContext, IOptions<ChatQueueConfiguration> queueOptions)
     {
         _dbContext = dbContext;
+        _queueOptions = queueOptions.Value;
     }
 
     public async Task<ChatEntity> CreateChatAsync(Guid userId, string? title, CancellationToken cancellationToken = default)
@@ -98,7 +102,9 @@ public sealed class ChatService : IChatService
             Id = Guid.CreateVersion7(),
             ChatId = chatId,
             MessageId = message.Id,
-            Status = JobStatus.Queued
+            Status = JobStatus.Queued,
+            Attempt = 0,
+            MaxAttempts = _queueOptions.MaxAttempts
         });
 
         var chat = await _dbContext.Chats.FirstOrDefaultAsync(x => x.Id == chatId, cancellationToken);
@@ -111,5 +117,27 @@ public sealed class ChatService : IChatService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         return message;
+    }
+
+    public async Task<bool> ReplayFailedJobAsync(Guid jobId, CancellationToken cancellationToken = default)
+    {
+        var job = await _dbContext.ProcessingJobs
+            .Include(x => x.Message)
+            .Include(x => x.Chat)
+            .FirstOrDefaultAsync(x => x.Id == jobId, cancellationToken);
+        if (job is null || job.Status != JobStatus.Failed)
+            return false;
+
+        job.Status = JobStatus.Queued;
+        job.Attempt = 0;
+        job.LastError = null;
+        job.LockedUntil = null;
+        job.Message.Status = MessageStatus.Queued;
+        job.Message.FailureCode = null;
+        job.Message.FailureReason = null;
+        job.Chat.Status = ChatStatus.Processing;
+        job.Chat.UpdatedAt = DateTimeOffset.UtcNow;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
     }
 }

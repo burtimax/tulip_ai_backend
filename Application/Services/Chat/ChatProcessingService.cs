@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Diagnostics;
 using Infrastructure.Db.App;
 using Infrastructure.Db.App.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +22,7 @@ public sealed class ChatProcessingService : IChatProcessingService
     private readonly ChatQueueConfiguration _queueOptions;
     private readonly OpenRouterApiConfiguration _openRouterConfig;
     private readonly ILogger<ChatProcessingService> _logger;
+    private readonly ChatProcessingMetrics _metrics;
 
     public ChatProcessingService(
         AppDbContext dbContext,
@@ -28,6 +30,7 @@ public sealed class ChatProcessingService : IChatProcessingService
         ILlmApiService llmApiService,
         IOptions<ChatQueueConfiguration> queueOptions,
         OpenRouterApiConfiguration openRouterConfig,
+        ChatProcessingMetrics metrics,
         ILogger<ChatProcessingService> logger)
     {
         _dbContext = dbContext;
@@ -35,6 +38,7 @@ public sealed class ChatProcessingService : IChatProcessingService
         _llmApiService = llmApiService;
         _queueOptions = queueOptions.Value;
         _openRouterConfig = openRouterConfig;
+        _metrics = metrics;
         _logger = logger;
     }
 
@@ -55,6 +59,7 @@ public sealed class ChatProcessingService : IChatProcessingService
 
         foreach (var job in jobs)
         {
+            _metrics.RecordQueueWait(DateTimeOffset.UtcNow - job.CreatedAt);
             await ProcessSingleJobAsync(job, cancellationToken);
         }
 
@@ -67,6 +72,7 @@ public sealed class ChatProcessingService : IChatProcessingService
             return;
 
         var now = DateTimeOffset.UtcNow;
+        var processingSw = Stopwatch.StartNew();
         job.Status = JobStatus.Processing;
         job.LockedUntil = now.AddSeconds(_queueOptions.LockTimeoutSeconds);
         job.Attempt += 1;
@@ -76,6 +82,13 @@ public sealed class ChatProcessingService : IChatProcessingService
 
         try
         {
+            using var logScope = _logger.BeginScope(new Dictionary<string, object>
+            {
+                ["ChatId"] = job.ChatId,
+                ["MessageId"] = job.MessageId,
+                ["JobId"] = job.Id
+            });
+
             var plantContext = await BuildPlantContextAsync(job.Message, cancellationToken);
             var prompt = BuildPrompt(plantContext, job.Message.TextHtml);
 
@@ -89,7 +102,10 @@ public sealed class ChatProcessingService : IChatProcessingService
                 }
             };
 
+            var llmSw = Stopwatch.StartNew();
             var llmResult = await _llmApiService.SendChatCompletionAsync(llmRequest, cancellationToken);
+            llmSw.Stop();
+            _metrics.RecordLlmLatency(llmSw.Elapsed);
             if (!llmResult.IsSuccess || llmResult.Value?.Choices.FirstOrDefault()?.Message?.Content is not { } reply || string.IsNullOrWhiteSpace(reply))
             {
                 throw new InvalidOperationException(llmResult.Error ?? "LLM returned empty response");
@@ -109,6 +125,7 @@ public sealed class ChatProcessingService : IChatProcessingService
             job.Message.FailureReason = null;
             job.Status = JobStatus.Completed;
             job.LastError = null;
+            _metrics.MarkProcessed();
         }
         catch (Exception ex)
         {
@@ -123,6 +140,7 @@ public sealed class ChatProcessingService : IChatProcessingService
             {
                 job.Status = JobStatus.Failed;
                 job.Message.Status = MessageStatus.Failed;
+                _metrics.MarkFailed();
             }
             else
             {
@@ -132,6 +150,8 @@ public sealed class ChatProcessingService : IChatProcessingService
         }
 
         await UpdateChatAggregateStatusAsync(job.ChatId, cancellationToken);
+        processingSw.Stop();
+        _metrics.RecordProcessingTime(processingSw.Elapsed);
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
@@ -150,7 +170,10 @@ public sealed class ChatProcessingService : IChatProcessingService
                 SimilarImages = true
             };
 
+            var plantIdSw = Stopwatch.StartNew();
             var result = await _plantIdService.CreateIdentificationAsync(analyzeRequest, cancellationToken: cancellationToken);
+            plantIdSw.Stop();
+            _metrics.RecordPlantIdLatency(plantIdSw.Elapsed);
             if (!result.IsSuccess || result.Value is null)
                 throw new InvalidOperationException($"Plant.id error: {result.Error ?? "unknown"}");
 

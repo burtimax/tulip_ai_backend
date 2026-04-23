@@ -54,6 +54,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<IFrontendLogService, FrontendLogService>();
         services.AddScoped<IChatService, ChatService>();
         services.AddScoped<IChatProcessingService, ChatProcessingService>();
+        services.AddSingleton<ChatProcessingMetrics>();
         services.AddTransient<TestJob>();
         services.AddScoped<IDatabaseBootstrap, DatabaseBootstrap>();
 

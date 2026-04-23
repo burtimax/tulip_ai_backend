@@ -198,25 +198,26 @@
 **Зависимость:** Epic 5 и Epic 6.
 
 ### 7.1 Ошибки и recovery
-- [ ] Добавить таймауты и retry/backoff для PlantId и OpenRouterService.
-- [ ] Ограничить число попыток и переводить задачи в `Failed`.
-- [ ] Добавить стратегию dead-letter/replay (если используется внешняя очередь).
+- [x] Добавить таймауты и retry/backoff для PlantId и OpenRouterService.
+- [x] Ограничить число попыток и переводить задачи в `Failed`.
+- [x] Добавить стратегию dead-letter/replay (если используется внешняя очередь).
 
 ### 7.2 Наблюдаемость
-- [ ] Метрики: queue wait, processing time, PlantId latency, LLM latency, fail rate.
-- [ ] Логи по шагам pipeline с корреляторами.
-- [ ] Алерты на рост задержек и ошибок.
+- [x] Метрики: queue wait, processing time, PlantId latency, LLM latency, fail rate.
+- [x] Логи по шагам pipeline с корреляторами.
+- [x] Алерты на рост задержек и ошибок.
 
 ### 7.3 Безопасность и лимиты
-- [ ] Rate-limit на отправку сообщений.
-- [ ] Лимиты размера/количества вложений.
-- [ ] Проверка MIME и безопасная обработка входного HTML.
+- [x] Rate-limit на отправку сообщений.
+- [x] Лимиты размера/количества вложений.
+- [x] Проверка MIME и безопасная обработка входного HTML.
 
 ### 7.4 Эксплуатационные инструкции
-- [ ] Runbook по ошибкам внешних интеграций.
-- [ ] Runbook по очистке/повторной обработке зависших задач.
+- [x] Runbook по ошибкам внешних интеграций.
+- [x] Runbook по очистке/повторной обработке зависших задач.
 
-**DoD эпика:** чат-пайплайн готов к стабильной эксплуатации в MVP.
+**DoD эпика:** чат-пайплайн готов к стабильной эксплуатации в MVP.  
+Артефакты: `Api/Middleware/ChatMessageRateLimitMiddleware.cs`, `Application/Services/Chat/ChatProcessingMetrics.cs`, `Api/Endpoints/Chat/ReplayFailedJobEndpoint.cs`, `docs/epic7_runbook.md`.
 
 ---
 

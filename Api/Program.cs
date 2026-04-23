@@ -111,6 +111,8 @@ if (app.Environment.IsDevelopment())
 app.UseMiddleware<ResponseExceptionMiddleware>();
 // Корреляция запросов по chatId/messageId/jobId + correlationId
 app.UseMiddleware<RequestCorrelationMiddleware>();
+// Ограничение частоты отправки сообщений в чат.
+app.UseMiddleware<ChatMessageRateLimitMiddleware>();
 
 // Настройка CORS политики
 app.UseCors(builder =>

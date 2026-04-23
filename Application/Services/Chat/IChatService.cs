@@ -14,6 +14,7 @@ public interface IChatService
         IReadOnlyList<ChatIncomingImage> incomingImages,
         string? clientRequestId,
         CancellationToken cancellationToken = default);
+    Task<bool> ReplayFailedJobAsync(Guid jobId, CancellationToken cancellationToken = default);
 }
 
 public sealed class ChatIncomingImage
