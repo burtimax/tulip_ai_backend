@@ -106,9 +106,6 @@ namespace Application.Services.User
 
             if (user is null) throw new Exception($"User not found [id = {userId}].");
 
-            if (r.ConfirmedPolicyAndDocuments is not null)
-                user.ConfirmedPolicyAndDocuments = r.ConfirmedPolicyAndDocuments;
-
             await _db.SaveChangesAsync(cancellation);
 
             return user;

@@ -6,8 +6,4 @@ namespace Application.Models.User;
 
 public class UpdateUserRequest
 {
-    /// <summary>
-    /// Пользователь подтвердил ознакомление с политикой и документами.
-    /// </summary>
-    public bool? ConfirmedPolicyAndDocuments { get; set; }
 }
