@@ -1,0 +1,35 @@
+using Infrastructure.Db.App.Entities;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+
+namespace Infrastructure.Db.App;
+
+public partial class AppDbContext : DbContext
+{
+    private const string appSchema = "app";
+    private const string statSchema = "stat";
+
+    public AppDbContext() { }
+
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    {
+    }
+
+    public DbSet<UserEntity> Users => Set<UserEntity>();
+    public DbSet<StatEventEntity> StatEvents => Set<StatEventEntity>();
+    public DbSet<LlmUsageEntity> LlmUsages => Set<LlmUsageEntity>();
+
+    public DbSet<LogEntity> Logs => Set<LogEntity>();
+
+
+    protected override void OnModelCreating(ModelBuilder builder)
+    {
+        base.OnModelCreating(builder);
+
+        SetSchemasToTables(builder);
+        SetAllToSnakeCase(builder);
+        AppDbContext.ConfigureEntities(builder);
+        AppDbContext.SetFilters(builder);
+    }
+}
