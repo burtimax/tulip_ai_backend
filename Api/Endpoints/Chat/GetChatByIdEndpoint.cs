@@ -1,0 +1,43 @@
+using Application.Services.Chat;
+using FastEndpoints;
+
+namespace Api.Endpoints.Chat;
+
+public sealed class GetChatByIdEndpoint : EndpointWithoutRequest<ChatItemDto>
+{
+    private readonly IChatService _chatService;
+
+    public GetChatByIdEndpoint(IChatService chatService)
+    {
+        _chatService = chatService;
+    }
+
+    public override void Configure()
+    {
+        Get("/{chatId:guid}");
+        Group<ChatGroupEndpoints>();
+        AllowAnonymous();
+    }
+
+    public override async Task HandleAsync(CancellationToken ct)
+    {
+        var chatId = Route<Guid>("chatId");
+        var chat = await _chatService.GetChatAsync(chatId, ct);
+        if (chat is null)
+        {
+            await SendNotFoundAsync(ct);
+            return;
+        }
+
+        await SendAsync(new ChatItemDto
+        {
+            ChatId = chat.Id,
+            UserId = chat.UserId,
+            Title = chat.Title,
+            Status = chat.Status.ToString(),
+            CreatedAt = chat.CreatedAt,
+            UpdatedAt = chat.UpdatedAt,
+            LastMessageAt = chat.LastMessageAt
+        }, cancellation: ct);
+    }
+}

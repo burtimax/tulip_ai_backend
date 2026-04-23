@@ -2,6 +2,7 @@ using System;
 using Application.Extensions;
 
 using Application.Services.BootstrapDatabase;
+using Application.Services.Chat;
 using Application.Services.Email;
 using Application.Services.Llm;
 using Application.Services.StatEvent;
@@ -51,6 +52,8 @@ public static class IServiceCollectionExtensions
 
         services.AddScoped<IStatEventService, StatEventService>();
         services.AddScoped<IFrontendLogService, FrontendLogService>();
+        services.AddScoped<IChatService, ChatService>();
+        services.AddScoped<IChatProcessingService, ChatProcessingService>();
         services.AddTransient<TestJob>();
         services.AddScoped<IDatabaseBootstrap, DatabaseBootstrap>();
 
@@ -59,6 +62,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<ICurrentUserAccessor, CurrentUserAccessor>();
         services.AddScoped<SetByUserIdInterceptor>();
         services.AddSingleton<ILlmUsageJournal, LlmUsageJournalService>();
+        services.AddHostedService<Api.BackgroundServices.ChatProcessingWorker>();
     }
 
     private static void AddValidatedOptions(this IServiceCollection services, IConfiguration configuration)
