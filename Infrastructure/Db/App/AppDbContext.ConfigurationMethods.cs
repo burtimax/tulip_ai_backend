@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using System.Text.Json;
 using Shared.Extensions;
 
 namespace Infrastructure.Db.App;
@@ -55,6 +56,8 @@ public partial class AppDbContext
         builder.Entity<MessageEntity>().ToTable("messages", appSchema);
         builder.Entity<MessageImageEntity>().ToTable("message_images", appSchema);
         builder.Entity<ProcessingJobEntity>().ToTable("processing_jobs", appSchema);
+        builder.Entity<KnowledgeCategoryEntity>().ToTable("knowledge_categories", knowledgeSchema);
+        builder.Entity<KnowledgeTitleEntity>().ToTable("knowledge_titles", knowledgeSchema);
     }
 
     /// <summary>
@@ -187,5 +190,39 @@ public partial class AppDbContext
             .HasIndex(e => e.ClientRequestId)
             .IsUnique()
             .HasFilter("\"client_request_id\" IS NOT NULL");
+
+        var stringListToJsonConverter = new ValueConverter<List<string>, string>(
+            images => JsonSerializer.Serialize(images, (JsonSerializerOptions?)null),
+            value => string.IsNullOrWhiteSpace(value)
+                ? new List<string>()
+                : JsonSerializer.Deserialize<List<string>>(value, (JsonSerializerOptions?)null) ?? new List<string>());
+
+        var stringListValueComparer = new ValueComparer<List<string>>(
+            (left, right) =>
+                (left ?? new List<string>()).SequenceEqual(right ?? new List<string>()),
+            value => value.Aggregate(0, (hash, item) => HashCode.Combine(hash, item.GetHashCode())),
+            value => value.ToList());
+
+        builder.Entity<KnowledgeTitleEntity>()
+            .Property(e => e.Images)
+            .HasConversion(stringListToJsonConverter)
+            .Metadata.SetValueComparer(stringListValueComparer);
+
+        builder.Entity<KnowledgeTitleEntity>()
+            .Property(e => e.Images)
+            .HasColumnType("jsonb");
+
+        builder.Entity<KnowledgeCategoryEntity>()
+            .HasMany(e => e.Titles)
+            .WithOne(e => e.Category)
+            .HasForeignKey(e => e.KnowledgeCategoryId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<KnowledgeCategoryEntity>()
+            .HasIndex(e => e.Name)
+            .IsUnique();
+
+        builder.Entity<KnowledgeTitleEntity>()
+            .HasIndex(e => new { e.KnowledgeCategoryId, e.Title });
     }
 }

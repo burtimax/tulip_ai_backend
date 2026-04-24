@@ -3,6 +3,7 @@ using System;
 using Infrastructure.Db.App;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Db.App.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260424145821_AddKnowledgeBaseSchema")]
+    partial class AddKnowledgeBaseSchema
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -134,11 +137,6 @@ namespace Infrastructure.Db.App.Migrations
                         .HasColumnName("name")
                         .HasComment("Название категории базы знаний");
 
-                    b.Property<int>("Order")
-                        .HasColumnType("integer")
-                        .HasColumnName("order")
-                        .HasComment("Порядок сортировки категории");
-
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at")
@@ -216,11 +214,6 @@ namespace Infrastructure.Db.App.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("knowledge_category_id")
                         .HasComment("Идентификатор категории");
-
-                    b.Property<int>("Order")
-                        .HasColumnType("integer")
-                        .HasColumnName("order")
-                        .HasComment("Порядок сортировки статьи внутри категории");
 
                     b.Property<string>("Title")
                         .IsRequired()

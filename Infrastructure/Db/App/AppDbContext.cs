@@ -9,6 +9,7 @@ public partial class AppDbContext : DbContext
 {
     private const string appSchema = "app";
     private const string statSchema = "stat";
+    private const string knowledgeSchema = "knowledge";
 
     public AppDbContext() { }
 
@@ -24,6 +25,8 @@ public partial class AppDbContext : DbContext
     public DbSet<MessageEntity> Messages => Set<MessageEntity>();
     public DbSet<MessageImageEntity> MessageImages => Set<MessageImageEntity>();
     public DbSet<ProcessingJobEntity> ProcessingJobs => Set<ProcessingJobEntity>();
+    public DbSet<KnowledgeCategoryEntity> KnowledgeCategories => Set<KnowledgeCategoryEntity>();
+    public DbSet<KnowledgeTitleEntity> KnowledgeTitles => Set<KnowledgeTitleEntity>();
 
 
     protected override void OnModelCreating(ModelBuilder builder)

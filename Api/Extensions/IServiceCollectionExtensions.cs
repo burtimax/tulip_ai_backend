@@ -5,6 +5,7 @@ using Application.Services.BootstrapDatabase;
 using Application.Services.Chat;
 using Application.Services.Email;
 using Application.Services.Llm;
+using Application.Services.Knowledge;
 using Application.Services.StatEvent;
 using Application.Services.User;
 using Application.Services.FrontendLog;
@@ -54,6 +55,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<IFrontendLogService, FrontendLogService>();
         services.AddScoped<IChatService, ChatService>();
         services.AddScoped<IChatProcessingService, ChatProcessingService>();
+        services.AddScoped<IKnowledgeService, KnowledgeService>();
         services.AddSingleton<ChatProcessingMetrics>();
         services.AddTransient<TestJob>();
         services.AddScoped<IDatabaseBootstrap, DatabaseBootstrap>();

@@ -57,6 +57,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Folder Include="Endpoints\App\KnowledgeBase\" />
       <Folder Include="Endpoints\User\CreatePlantIdentification\" />
     </ItemGroup>
 
