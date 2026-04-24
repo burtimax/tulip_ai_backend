@@ -89,8 +89,8 @@ public sealed class ChatProcessingService : IChatProcessingService
                 ["JobId"] = job.Id
             });
 
-            var plantContext = await BuildPlantContextAsync(job.Message, cancellationToken);
-            var prompt = BuildPrompt(plantContext, job.Message.TextHtml);
+            var (plantContext, plantImageUrls) = await BuildPlantContextAsync(job.Message, cancellationToken);
+            var prompt = BuildPrompt(plantContext, plantImageUrls, job.Message.TextHtml);
 
             var llmRequest = new OpenRouterChatRequest
             {
@@ -155,12 +155,17 @@ public sealed class ChatProcessingService : IChatProcessingService
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    private async Task<string> BuildPlantContextAsync(MessageEntity message, CancellationToken cancellationToken)
+    private async Task<(string ContextText, List<string> ImageUrls)> BuildPlantContextAsync(
+        MessageEntity message,
+        CancellationToken cancellationToken)
     {
         if (message.Images.Count == 0)
-            return "Изображения не приложены.";
+            return ("Изображения не приложены.", new List<string>());
 
         var perImage = new List<object>();
+        var contextParts = new List<string>();
+        var imageUrls = new List<string>();
+
         foreach (var image in message.Images.OrderBy(x => x.SortOrder))
         {
             var analyzeRequest = new PlantIdAnalyzeRequest
@@ -181,44 +186,127 @@ public sealed class ChatProcessingService : IChatProcessingService
                 ? JsonSerializer.Serialize(result.Value)
                 : result.Value.RawJson;
 
-            var topPlant = result.Value.Result?.Classification?.Suggestions
-                ?.OrderByDescending(x => x.Probability ?? 0)
-                .FirstOrDefault();
-            var topDiseases = result.Value.Result?.Disease?.Suggestions?
-                .OrderByDescending(x => x.Probability ?? 0)
-                .Take(3)
-                .Select(x => (object)new { x.Name, x.Probability })
-                .ToList() ?? new List<object>();
+            var plantResult = result.Value.Result;
+            var isPlant = plantResult?.IsPlant?.Binary == true;
+            var isPlantProbabilityPercent = ToPercent(plantResult?.IsPlant?.Probability);
+
+            string textBlock;
+            string? plantImageUrl = null;
+            string? diseaseImageUrl = null;
+            string? plantName = null;
+            double? plantProbability = null;
+            bool? isHealthy = null;
+            string? diseaseName = null;
+            double? diseaseProbability = null;
+
+            var attachedImageUrls = new List<string>();
+
+            if (!isPlant)
+            {
+                textBlock =
+                    $"Фото {image.SortOrder + 1}: На фото, скорее всего, не растение. Вероятность, что это растение: {isPlantProbabilityPercent}.";
+            }
+            else
+            {
+                var topPlant = plantResult?.Classification?.Suggestions
+                    ?.OrderByDescending(x => x.Probability ?? 0)
+                    .FirstOrDefault();
+                plantName = topPlant?.Name;
+                plantProbability = topPlant?.Probability;
+                plantImageUrl = topPlant?.SimilarImages.FirstOrDefault()?.Url;
+                isHealthy = plantResult?.IsHealthy?.Binary;
+
+                var blockLines = new List<string>
+                {
+                    $"Фото {image.SortOrder + 1}: На фото определено растение: {plantName ?? "не удалось определить"}.",
+                    $"Вероятность определения растения: {ToPercent(plantProbability)}."
+                };
+
+                if (isHealthy == true)
+                {
+                    blockLines.Add("Болезни у растения отсутствуют.");
+                }
+                else
+                {
+                    var topDisease = plantResult?.Disease?.Suggestions
+                        ?.OrderByDescending(x => x.Probability ?? 0)
+                        .FirstOrDefault();
+                    diseaseName = topDisease?.Name;
+                    diseaseProbability = topDisease?.Probability;
+                    diseaseImageUrl = topDisease?.SimilarImages.FirstOrDefault()?.Url;
+
+                    blockLines.Add($"Возможное заболевание: {diseaseName ?? "не удалось определить"}.");
+                    blockLines.Add($"Вероятность заболевания: {ToPercent(diseaseProbability)}.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(plantImageUrl))
+                {
+                    imageUrls.Add(plantImageUrl);
+                    attachedImageUrls.Add(plantImageUrl);
+                    blockLines.Add($"Прикрепил [Фото {imageUrls.Count}]: Наиболее похожее фото растения.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(diseaseImageUrl))
+                {
+                    imageUrls.Add(diseaseImageUrl);
+                    attachedImageUrls.Add(diseaseImageUrl);
+                    blockLines.Add($"Прикрепил [Фото {imageUrls.Count}]: Наиболее похожее фото заболевания.");
+                }
+
+                textBlock = string.Join(Environment.NewLine, blockLines);
+            }
+
+            contextParts.Add(textBlock);
 
             var normalized = new
             {
-                isPlant = result.Value.Result?.IsPlant?.Binary,
-                isHealthy = result.Value.Result?.IsHealthy?.Binary,
-                topPlant = topPlant is null ? null : new { topPlant.Name, topPlant.Probability },
-                topDiseases
+                isPlant = plantResult?.IsPlant?.Binary,
+                isPlantProbability = plantResult?.IsPlant?.Probability,
+                isHealthy = plantResult?.IsHealthy?.Binary,
+                topPlant = plantName is null ? null : new { Name = plantName, Probability = plantProbability, ImageUrl = plantImageUrl },
+                topDisease = diseaseName is null ? null : new { Name = diseaseName, Probability = diseaseProbability, ImageUrl = diseaseImageUrl },
+                attachedImageUrls
             };
             image.PlantIdNormalizedJson = JsonSerializer.Serialize(normalized);
             perImage.Add(new { image.SortOrder, normalized });
         }
 
-        return JsonSerializer.Serialize(perImage);
+        var contextText = string.Join($"{Environment.NewLine}{Environment.NewLine}", contextParts);
+        return (contextText, imageUrls.Distinct(StringComparer.OrdinalIgnoreCase).ToList());
     }
 
-    private static string BuildPrompt(string plantContextJson, string? userTextHtml)
+    private static string BuildPrompt(string plantContext, IReadOnlyCollection<string> plantImageUrls, string? userTextHtml)
     {
         var userText = string.IsNullOrWhiteSpace(userTextHtml)
-            ? "Пользовательский вопрос отсутствует, дай диагностическую рекомендацию по фото."
+            ? "Пользовательский вопрос отсутствует, дай краткую диагностическую рекомендацию по фото."
             : userTextHtml;
+        var imageAttachments = plantImageUrls.Count == 0
+            ? "Дополнительные похожие фото отсутствуют."
+            : string.Join(
+                Environment.NewLine,
+                plantImageUrls.Select((url, index) => $"Фото {index + 1}: {url}"));
 
         return $"""
-            Контекст PlantId по изображениям:
-            {plantContextJson}
+            Контекст PlantId по изображениям (структурированный текст):
+            {plantContext}
 
-            Текст пользователя:
+            Список похожих фото, которые нужно учитывать как прикреплённые:
+            {imageAttachments}
+
+            Вопрос от пользователя:
             {userText}
 
-            Сформируй краткий практический ответ по уходу за тюльпанами, укажи вероятные проблемы и шаги.
+            Дай краткую информацию по растению, если предоставлены данные по заболеванию, объясни что за заболевание.
+            В конце задай вопрос, предложи пользователю варианты развития диалога в контексте выращивания растений и лечения их.
             """;
+    }
+
+    private static string ToPercent(double? value)
+    {
+        if (value is null)
+            return "неизвестно";
+
+        return $"{Math.Round(value.Value * 100, 2):0.##}%";
     }
 
     private async Task UpdateChatAggregateStatusAsync(Guid chatId, CancellationToken cancellationToken)
