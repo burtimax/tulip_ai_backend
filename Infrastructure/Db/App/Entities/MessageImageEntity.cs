@@ -32,9 +32,11 @@ public sealed class MessageImageEntity : BaseEntity
     [Comment("Порядок изображения в сообщении")]
     public int SortOrder { get; set; }
 
+    [JsonIgnore]
     [Comment("Сырой ответ PlantId")]
     public string? PlantIdRawJson { get; set; }
 
+    [JsonIgnore]
     [Comment("Нормализованный ответ PlantId")]
     public string? PlantIdNormalizedJson { get; set; }
 }

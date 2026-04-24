@@ -1,10 +1,11 @@
+using System.ComponentModel;
 using Shared.Models;
 
 namespace Api.Endpoints.Chat;
 
 public sealed class CreateChatRequest
 {
-    public Guid UserId { get; set; }
+    [DefaultValue(null)]
     public string? Title { get; set; }
 }
 

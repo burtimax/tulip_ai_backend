@@ -1,3 +1,4 @@
+using Api.Extensions;
 using Application.Services.Chat;
 using FastEndpoints;
 using Shared.Contracts;
@@ -17,18 +18,14 @@ public sealed class CreateChatEndpoint : Endpoint<CreateChatRequest, Result<Crea
     {
         Post("/");
         Group<ChatGroupEndpoints>();
-        AllowAnonymous();
     }
 
     public override async Task HandleAsync(CreateChatRequest req, CancellationToken ct)
     {
-        if (req.UserId == Guid.Empty)
-        {
-            await ChatEndpointErrors.WriteValidationErrorAsync(HttpContext, "userId is required", cancellationToken: ct);
-            return;
-        }
+        var userId = HttpContext.TokenData().UserId;
+        var title = DateTimeOffset.UtcNow.ToString();
 
-        var chat = await _chatService.CreateChatAsync(req.UserId, req.Title, ct);
+        var chat = await _chatService.CreateChatAsync(userId, title, ct);
         await SendAsync(new Result<CreateChatResponse>(new CreateChatResponse
         {
             ChatId = chat.Id,

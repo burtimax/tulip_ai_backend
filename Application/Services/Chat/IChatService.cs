@@ -21,7 +21,7 @@ public interface IChatService
 
 public sealed class ChatIncomingImage
 {
-    public required string DataUrl { get; init; }
+    public required string StorageUrl { get; init; }
     public required string MimeType { get; init; }
     public required long SizeBytes { get; init; }
     public int? Width { get; init; }

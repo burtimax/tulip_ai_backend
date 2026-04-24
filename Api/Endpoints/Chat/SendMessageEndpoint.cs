@@ -2,6 +2,7 @@ using Application.Services.Chat;
 using FastEndpoints;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
+using ModuleS3.Service;
 using Shared.Configs;
 using Shared.Contracts;
 
@@ -11,11 +12,19 @@ public sealed class SendMessageEndpoint : Endpoint<SendMessageRequest, Result<Se
 {
     private readonly IChatService _chatService;
     private readonly ChatStorageConfiguration _storageOptions;
+    private readonly IS3ObjectStorageService _s3ObjectStorageService;
+    private readonly S3Configuration _s3Configuration;
 
-    public SendMessageEndpoint(IChatService chatService, IOptions<ChatStorageConfiguration> storageOptions)
+    public SendMessageEndpoint(
+        IChatService chatService,
+        IOptions<ChatStorageConfiguration> storageOptions,
+        IS3ObjectStorageService s3ObjectStorageService,
+        S3Configuration s3Configuration)
     {
         _chatService = chatService;
         _storageOptions = storageOptions.Value;
+        _s3ObjectStorageService = s3ObjectStorageService;
+        _s3Configuration = s3Configuration;
     }
 
     public override void Configure()
@@ -99,12 +108,13 @@ public sealed class SendMessageEndpoint : Endpoint<SendMessageRequest, Result<Se
             await using var memoryStream = new MemoryStream();
             await image.CopyToAsync(memoryStream, ct);
             var bytes = memoryStream.ToArray();
-            var base64 = Convert.ToBase64String(bytes);
-            var dataUrl = $"data:{image.ContentType};base64,{base64}";
+            var key = BuildImageObjectKey(chatId, image.ContentType);
+            await _s3ObjectStorageService.UploadFromBytesAsync(key, bytes, image.ContentType, ct);
+            var publicUrl = BuildPublicObjectUrl(key);
 
             incomingImages.Add(new ChatIncomingImage
             {
-                DataUrl = dataUrl,
+                StorageUrl = publicUrl,
                 MimeType = image.ContentType.Trim().ToLowerInvariant(),
                 SizeBytes = image.Length,
                 Width = null,
@@ -125,5 +135,31 @@ public sealed class SendMessageEndpoint : Endpoint<SendMessageRequest, Result<Se
             Status = message.Status.ToString(),
             CreatedAt = message.CreatedAt
         }), 202, ct);
+    }
+
+    private string BuildImageObjectKey(Guid chatId, string contentType)
+    {
+        var extension = contentType.Trim().ToLowerInvariant() switch
+        {
+            "image/jpeg" => "jpg",
+            "image/png" => "png",
+            "image/webp" => "webp",
+            _ => "bin"
+        };
+
+        var prefix = (_s3Configuration.Prefix ?? string.Empty).Trim().Trim('/');
+        var objectName = $"chat-images/{chatId:N}/{Guid.CreateVersion7():N}.{extension}";
+
+        return string.IsNullOrWhiteSpace(prefix)
+            ? objectName
+            : $"{prefix}/{objectName}";
+    }
+
+    private string BuildPublicObjectUrl(string key)
+    {
+        var serviceUrl = (_s3Configuration.ServiceUrl ?? string.Empty).Trim().TrimEnd('/');
+        var bucket = (_s3Configuration.BucketName ?? string.Empty).Trim();
+        var encodedKey = Uri.EscapeDataString(key).Replace("%2F", "/");
+        return $"{serviceUrl}/{bucket}/{encodedKey}";
     }
 }

@@ -103,7 +103,7 @@ public sealed class ChatService : IChatService
             {
                 Id = Guid.CreateVersion7(),
                 MessageId = message.Id,
-                StorageUrl = image.DataUrl,
+                StorageUrl = image.StorageUrl,
                 MimeType = image.MimeType,
                 SizeBytes = image.SizeBytes,
                 Width = image.Width,
