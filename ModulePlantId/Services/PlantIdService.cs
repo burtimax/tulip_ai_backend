@@ -465,10 +465,10 @@ public class PlantIdService : IPlantIdService
 
     private static string NormalizeImage(string image)
     {
-        if (image.StartsWith("data:image", StringComparison.OrdinalIgnoreCase))
+        //if (image.StartsWith("data:image", StringComparison.OrdinalIgnoreCase))
             return image;
 
-        return $"data:image/jpeg;base64,{image}";
+        //return $"data:image/jpeg;base64,{image}";
     }
 
     private static bool ShouldRetry(HttpStatusCode statusCode)

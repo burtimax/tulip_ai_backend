@@ -272,6 +272,7 @@ public sealed class ChatProcessingService : IChatProcessingService
 
                 var blockLines = new List<string>
                 {
+                    "Результаты фотоанализа Plant.Id",
                     $"Фото {image.SortOrder + 1}: На фото определено растение: {plantName ?? "не удалось определить"}.",
                     $"Вероятность определения растения: {ToPercent(plantProbability)}."
                 };
@@ -297,14 +298,14 @@ public sealed class ChatProcessingService : IChatProcessingService
                 {
                     imageUrls.Add(plantImageUrl);
                     attachedImageUrls.Add(plantImageUrl);
-                    blockLines.Add($"Прикрепил [Фото {imageUrls.Count}]: Наиболее похожее фото растения.");
+                    blockLines.Add($"Прикрепил [Картинка {imageUrls.Count}]: Наиболее похожее фото растения.");
                 }
 
                 if (!string.IsNullOrWhiteSpace(diseaseImageUrl))
                 {
                     imageUrls.Add(diseaseImageUrl);
                     attachedImageUrls.Add(diseaseImageUrl);
-                    blockLines.Add($"Прикрепил [Фото {imageUrls.Count}]: Наиболее похожее фото заболевания.");
+                    blockLines.Add($"Прикрепил [Картинка {imageUrls.Count}]: Наиболее похожее фото заболевания.");
                 }
 
                 textBlock = string.Join(Environment.NewLine, blockLines);
