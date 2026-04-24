@@ -77,6 +77,33 @@ public sealed class ChatService : IChatService
             .FirstOrDefaultAsync(x => x.Id == messageId, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<MessageEntity>?> GetMessageWithNextAsync(
+        Guid messageId,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        var anchor = await _dbContext.Messages
+            .AsNoTracking()
+            .Where(x => x.Id == messageId)
+            .Select(x => new { x.ChatId, x.CreatedAt, x.Id })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (anchor is null)
+            return null;
+
+        var limit = Math.Clamp(take, 0, 500) + 1;
+
+        return await _dbContext.Messages
+            .AsNoTracking()
+            .Include(x => x.Images.OrderBy(i => i.SortOrder))
+            .Where(x => x.ChatId == anchor.ChatId &&
+                        (x.CreatedAt > anchor.CreatedAt ||
+                         (x.CreatedAt == anchor.CreatedAt && x.Id.CompareTo(anchor.Id) >= 0)))
+            .OrderBy(x => x.CreatedAt)
+            .ThenBy(x => x.Id)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<MessageEntity> EnqueueMessageAsync(
         Guid chatId,
         string? textHtml,

@@ -16,6 +16,10 @@ public interface IChatService
         IReadOnlyList<ChatIncomingImage> incomingImages,
         string? clientRequestId,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<MessageEntity>?> GetMessageWithNextAsync(
+        Guid messageId,
+        int take,
+        CancellationToken cancellationToken = default);
     Task<bool> ReplayFailedJobAsync(Guid jobId, CancellationToken cancellationToken = default);
 }
 

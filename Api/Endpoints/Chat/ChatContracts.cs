@@ -81,3 +81,9 @@ public sealed class GetMessageByIdRequest
     public Guid MessageId { get; set; }
 }
 
+public sealed class GetMessageWithNextRequest
+{
+    public Guid MessageId { get; set; }
+    public int Take { get; set; } = 10;
+}
+
