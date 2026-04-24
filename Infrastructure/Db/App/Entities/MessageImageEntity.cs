@@ -18,10 +18,10 @@ public sealed class MessageImageEntity : BaseEntity
     public string StorageUrl { get; set; } = string.Empty;
 
     [Comment("MIME-тип изображения")]
-    public string MimeType { get; set; } = string.Empty;
+    public string? MimeType { get; set; } = string.Empty;
 
     [Comment("Размер изображения в байтах")]
-    public long SizeBytes { get; set; }
+    public long? SizeBytes { get; set; }
 
     [Comment("Ширина изображения")]
     public int? Width { get; set; }

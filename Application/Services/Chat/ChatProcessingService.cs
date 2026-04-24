@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Diagnostics;
 using Infrastructure.Db.App;
 using Infrastructure.Db.App.Entities;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -16,6 +17,7 @@ namespace Application.Services.Chat;
 
 public sealed class ChatProcessingService : IChatProcessingService
 {
+    private const int MaxChatHistoryMessages = 20;
     private readonly AppDbContext _dbContext;
     private readonly IPlantIdService _plantIdService;
     private readonly ILlmApiService _llmApiService;
@@ -90,17 +92,21 @@ public sealed class ChatProcessingService : IChatProcessingService
             });
 
             var (plantContext, plantImageUrls) = await BuildPlantContextAsync(job.Message, cancellationToken);
-            var prompt = BuildPrompt(plantContext, plantImageUrls, job.Message.TextHtml);
+            var request = BuildRequest(plantContext, plantImageUrls, job.Message.TextHtml);
+            var chatHistory = await LoadChatHistoryForLlmAsync(job.ChatId, job.MessageId, cancellationToken);
 
             var llmRequest = new OpenRouterChatRequest
             {
                 Model = _openRouterConfig.Model,
-                Messages = new List<OpenRouterMessage>
-                {
-                    new() { Role = "system", Content = "Ты агрономический AI-ассистент по тюльпанам. Отвечай конкретно и на русском языке." },
-                    new() { Role = "user", Content = prompt }
-                }
+                Messages = new List<OpenRouterMessage>()
             };
+            llmRequest.Messages.Add(new OpenRouterMessage
+            {
+                Role = "system",
+                Content = PromptBuilder.MainPrompt,
+            });
+            llmRequest.Messages.AddRange(chatHistory);
+            llmRequest.Messages.Add(new OpenRouterMessage { Role = "user", Content = request });
 
             var llmSw = Stopwatch.StartNew();
             var llmResult = await _llmApiService.SendChatCompletionAsync(llmRequest, cancellationToken);
@@ -111,14 +117,27 @@ public sealed class ChatProcessingService : IChatProcessingService
                 throw new InvalidOperationException(llmResult.Error ?? "LLM returned empty response");
             }
 
-            _dbContext.Messages.Add(new MessageEntity
+            var newMessage = new MessageEntity
             {
                 Id = Guid.CreateVersion7(),
                 ChatId = job.ChatId,
                 Role = MessageRole.Assistant,
                 Status = MessageStatus.Completed,
-                TextHtml = reply.Trim()
-            });
+                TextHtml = reply.Trim(),
+            };
+
+            if (plantImageUrls is not null && plantImageUrls.Any())
+            {
+                int c = 0;
+                var provider = new FileExtensionContentTypeProvider();
+                newMessage.Images = plantImageUrls.Select(i => new MessageImageEntity() {
+                        StorageUrl = i,
+                        SortOrder = ++c,
+                        MimeType = provider.TryGetContentType(i.Split('/').LastOrDefault(), out var mimeType) ? mimeType : "application/octet-stream" })
+                    .ToList();
+            }
+
+            _dbContext.Messages.Add(newMessage);
 
             job.Message.Status = MessageStatus.Completed;
             job.Message.FailureCode = null;
@@ -154,6 +173,41 @@ public sealed class ChatProcessingService : IChatProcessingService
         _metrics.RecordProcessingTime(processingSw.Elapsed);
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    private async Task<List<OpenRouterMessage>> LoadChatHistoryForLlmAsync(
+        Guid chatId,
+        Guid currentMessageId,
+        CancellationToken cancellationToken)
+    {
+        var history = await _dbContext.Messages
+            .Where(x =>
+                x.ChatId == chatId &&
+                x.Id != currentMessageId &&
+                x.Status == MessageStatus.Completed &&
+                !string.IsNullOrWhiteSpace(x.TextHtml))
+            .OrderByDescending(x => x.CreatedAt)
+            .Take(MaxChatHistoryMessages)
+            .OrderBy(x => x.CreatedAt)
+            .Select(x => new { x.Role, x.TextHtml })
+            .ToListAsync(cancellationToken);
+
+        return history
+            .Select(x => new OpenRouterMessage
+            {
+                Role = MapMessageRoleToLlmRole(x.Role),
+                Content = x.TextHtml!
+            })
+            .ToList();
+    }
+
+    private static string MapMessageRoleToLlmRole(MessageRole role) =>
+        role switch
+        {
+            MessageRole.User => "user",
+            MessageRole.Assistant => "assistant",
+            MessageRole.System => "system",
+            _ => "user"
+        };
 
     private async Task<(string ContextText, List<string> ImageUrls)> BuildPlantContextAsync(
         MessageEntity message,
@@ -275,7 +329,7 @@ public sealed class ChatProcessingService : IChatProcessingService
         return (contextText, imageUrls.Distinct(StringComparer.OrdinalIgnoreCase).ToList());
     }
 
-    private static string BuildPrompt(string plantContext, IReadOnlyCollection<string> plantImageUrls, string? userTextHtml)
+    private static string BuildRequest(string plantContext, IReadOnlyCollection<string> plantImageUrls, string? userTextHtml)
     {
         var userText = string.IsNullOrWhiteSpace(userTextHtml)
             ? "Пользовательский вопрос отсутствует, дай краткую диагностическую рекомендацию по фото."
@@ -295,12 +349,6 @@ public sealed class ChatProcessingService : IChatProcessingService
 
             Вопрос от пользователя:
             {userText}
-
-            ВАЖНО: верни ответ строго в HTML-формате (без Markdown).
-            Используй разметку <p>, <ul>, <li>, <b>, <br>, <i>; для акцентов можно <strong>.
-            Не добавляй теги <html>, <head>, <body> — только HTML-фрагмент для сохранения в TextHtml.
-            Дай краткую информацию по растению, если предоставлены данные по заболеванию, объясни что за заболевание.
-            В конце задай вопрос, предложи пользователю варианты развития диалога в контексте выращивания растений и лечения их.
             """;
     }
 
