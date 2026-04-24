@@ -36,7 +36,8 @@ public class SetByUserIdInterceptor : SaveChangesInterceptor
         {
             if (entry.State == EntityState.Added && entry.Entity.CreatedById == null)
             {
-                entry.Entity.Id = Guid.CreateVersion7();
+                if(entry.Entity.Id == Guid.Empty)
+                    entry.Entity.Id = Guid.CreateVersion7();
                 entry.Entity.CreatedAt = DateTimeOffset.UtcNow;
             }
         }
