@@ -18,6 +18,11 @@ public sealed class GetChatByIdEndpoint : Endpoint<GetChatByIdRequest, Result<Ch
         Get("/{chatId:guid}");
         Group<ChatGroupEndpoints>();
         AllowAnonymous();
+        Summary(s =>
+        {
+            s.Summary = "Получение чата по ИД";
+            s.Description = "Получаем конкретный чат по идентификатору";
+        });
     }
 
     public override async Task HandleAsync(GetChatByIdRequest req, CancellationToken ct)

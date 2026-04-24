@@ -18,6 +18,11 @@ public sealed class CreateChatEndpoint : Endpoint<CreateChatRequest, Result<Crea
     {
         Post("/");
         Group<ChatGroupEndpoints>();
+        Summary(s =>
+        {
+            s.Summary = "Создание чата";
+            s.Description = "Создаем новый чат для пользователя";
+        });
     }
 
     public override async Task HandleAsync(CreateChatRequest req, CancellationToken ct)

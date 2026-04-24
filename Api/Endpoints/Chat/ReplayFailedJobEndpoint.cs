@@ -17,6 +17,11 @@ public sealed class ReplayFailedJobEndpoint : Endpoint<ReplayFailedJobRequest, R
     {
         Post("/jobs/{jobId:guid}/replay");
         Group<ChatGroupEndpoints>();
+        Summary(s =>
+        {
+            s.Summary = "Повтор сбойной задачи";
+            s.Description = "Повторно ставим в очередь задачу обработки сообщения после ошибки";
+        });
     }
 
     public override async Task HandleAsync(ReplayFailedJobRequest req, CancellationToken ct)

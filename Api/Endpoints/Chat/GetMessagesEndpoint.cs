@@ -19,6 +19,12 @@ public sealed class GetMessagesEndpoint : Endpoint<GetMessagesRequest, Result<Pa
     {
         Get("/{chatId:guid}/messages");
         Group<ChatGroupEndpoints>();
+        Summary(s =>
+        {
+            s.Summary = "Получение сообщения по ИД";
+            s.Description = "Получаем конкретное сообщение по идентификатору";
+        });
+
     }
 
     public override async Task HandleAsync(GetMessagesRequest req, CancellationToken ct)

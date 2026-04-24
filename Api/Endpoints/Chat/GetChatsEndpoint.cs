@@ -20,6 +20,11 @@ public sealed class GetChatsEndpoint : Endpoint<GetChatsRequest, Result<PagedLis
     {
         Get("/");
         Group<ChatGroupEndpoints>();
+        Summary(s =>
+        {
+            s.Summary = "Получение списка чатов";
+            s.Description = "Получаем список чатов текущего пользователя с пагинацией";
+        });
     }
 
     public override async Task HandleAsync(GetChatsRequest req, CancellationToken ct)

@@ -32,6 +32,11 @@ public sealed class SendMessageEndpoint : Endpoint<SendMessageRequest, Result<Se
         Post("/{chatId:guid}/messages");
         Group<ChatGroupEndpoints>();
         AllowFileUploads();
+        Summary(s =>
+        {
+            s.Summary = "Отправка сообщения в чат";
+            s.Description = "Отправляем текст и/или изображения в выбранный чат";
+        });
     }
 
     public override async Task HandleAsync(SendMessageRequest req, CancellationToken ct)

@@ -18,6 +18,11 @@ public sealed class GetMessageWithNextEndpoint : Endpoint<GetMessageWithNextRequ
     {
         Get("/messages/{messageId:guid}/next");
         Group<ChatGroupEndpoints>();
+        Summary(s =>
+        {
+            s.Summary = "Получение сообщения и следующих";
+            s.Description = "Получаем сообщение по идентификатору и заданное количество следующих сообщений";
+        });
     }
 
     public override async Task HandleAsync(GetMessageWithNextRequest req, CancellationToken ct)
