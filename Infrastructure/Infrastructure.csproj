@@ -31,4 +31,8 @@
       <Compile Remove="Db\App\Entities\PlantIdentificationEntity.cs" />
     </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="../docs/knowledge_base.json" LogicalName="knowledge_base.json" />
+  </ItemGroup>
+
 </Project>
