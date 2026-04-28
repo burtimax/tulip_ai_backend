@@ -79,7 +79,7 @@ public class PlantIdDiseaseData
     public List<PlantIdSuggestion> Suggestions { get; set; } = [];
 
     [JsonPropertyName("question")]
-    public string? Question { get; set; }
+    public PlantIdDiseaseQuestion? Question { get; set; }
 }
 
 public class PlantIdClassificationData
@@ -149,4 +149,31 @@ public class PlantIdBinaryResult
 
     [JsonPropertyName("binary")]
     public bool? Binary { get; set; }
+}
+
+public class PlantIdDiseaseQuestion
+{
+    [JsonPropertyName("text")]
+    public string? Text { get; set; }
+
+    [JsonPropertyName("translation")]
+    public string? Translation { get; set; }
+
+    [JsonPropertyName("options")]
+    public Dictionary<string, PlantIdDiseaseQuestionOption> Options { get; set; } = [];
+}
+
+public class PlantIdDiseaseQuestionOption
+{
+    [JsonPropertyName("suggestion_index")]
+    public int? SuggestionIndex { get; set; }
+
+    [JsonPropertyName("entity_id")]
+    public string? EntityId { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("translation")]
+    public string? Translation { get; set; }
 }

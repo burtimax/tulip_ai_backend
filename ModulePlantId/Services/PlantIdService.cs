@@ -486,6 +486,8 @@ public class PlantIdService : IPlantIdService
     {
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
+        Console.WriteLine($"PLANT ID результат: " + body);
+
         if (response.IsSuccessStatusCode)
         {
             if (string.IsNullOrWhiteSpace(body))

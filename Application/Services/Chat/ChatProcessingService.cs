@@ -292,6 +292,13 @@ public sealed class ChatProcessingService : IChatProcessingService
 
                     blockLines.Add($"Возможное заболевание: {diseaseName ?? "не удалось определить"}.");
                     blockLines.Add($"Вероятность заболевания: {ToPercent(diseaseProbability)}.");
+
+                    var diseaseQuestion = plantResult?.Disease?.Question;
+                    if (!string.IsNullOrWhiteSpace(diseaseQuestion?.Text))
+                    {
+                        blockLines.Add(
+                            $"Комментарий от PlantID: дополнительный уточняющий вопрос сервиса — \"{diseaseQuestion.Text}\".");
+                    }
                 }
 
                 if (!string.IsNullOrWhiteSpace(plantImageUrl))

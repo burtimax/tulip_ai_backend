@@ -110,3 +110,153 @@ curl --location 'https://plant.id/api/v3/identification' \
     "created": 1776952112.195343,
     "completed": 1776952112.807876
 }
+
+
+
+ПРИМЕР ОТВЕТА С УТОЧНЯЮЩИМ ВОПРОСОМ
+
+{
+  "access_token": "u1UsuKfLbuQ1QZ3",
+  "model_version": "plant_id:5.1.1",
+  "custom_id": null,
+  "input": {
+    "latitude": null,
+    "longitude": null,
+    "health": "all",
+    "similar_images": true,
+    "images": [
+      "https://plant.id/media/imgs/ec3474dba48b478e958dac2838e7df89.jpg"
+    ],
+    "datetime": "2026-04-28T09:56:58.182148+00:00"
+  },
+  "result": {
+    "classification": {
+      "suggestions": [
+        {
+          "id": "c1396f242d8786ff",
+          "name": "Cucumis sativus",
+          "probability": 0.99,
+          "similar_images": [
+            {
+              "id": "1c18c4f8e868fdf2c204d68ad71c669ffd263ef0",
+              "url": "https://plant-id.ams3.cdn.digitaloceanspaces.com/similar_images/5/1c1/8c4f8e868fdf2c204d68ad71c669ffd263ef0.jpeg",
+              "license_name": "CC BY-NC-SA 4.0",
+              "license_url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+              "citation": "FlowerChecker s.r.o.",
+              "similarity": 0.785,
+              "url_small": "https://plant-id.ams3.cdn.digitaloceanspaces.com/similar_images/5/1c1/8c4f8e868fdf2c204d68ad71c669ffd263ef0.small.jpeg"
+            },
+            {
+              "id": "373d2a60f0a6dd93d9ecc050ffcd1f6f92c7e63f",
+              "url": "https://plant-id.ams3.cdn.digitaloceanspaces.com/similar_images/5/373/d2a60f0a6dd93d9ecc050ffcd1f6f92c7e63f.jpeg",
+              "license_name": "CC BY-NC-SA 4.0",
+              "license_url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+              "citation": "FlowerChecker s.r.o.",
+              "similarity": 0.757,
+              "url_small": "https://plant-id.ams3.cdn.digitaloceanspaces.com/similar_images/5/373/d2a60f0a6dd93d9ecc050ffcd1f6f92c7e63f.small.jpeg"
+            }
+          ],
+          "details": {
+            "language": "en",
+            "entity_id": "c1396f242d8786ff"
+          }
+        }
+      ]
+    },
+    "is_plant": {
+      "probability": 0.9939667,
+      "threshold": 0.5,
+      "binary": true
+    },
+    "disease": {
+      "suggestions": [
+        {
+          "id": "edebdcd974b11e08",
+          "name": "water deficiency",
+          "probability": 0.5394,
+          "similar_images": [
+            {
+              "id": "4643b1183767db7a6ef842d5f22815f6490e9145",
+              "url": "https://plant-id.ams3.cdn.digitaloceanspaces.com/similar_images/5/464/3b1183767db7a6ef842d5f22815f6490e9145.jpg",
+              "license_name": "CC BY-NC-SA 4.0",
+              "license_url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+              "citation": "FlowerChecker s.r.o.",
+              "similarity": 0.47,
+              "url_small": "https://plant-id.ams3.cdn.digitaloceanspaces.com/similar_images/5/464/3b1183767db7a6ef842d5f22815f6490e9145.small.jpg"
+            },
+            {
+              "id": "72de35e63153d0e0f7677aba0619faa281dbe859",
+              "url": "https://plant-id.ams3.cdn.digitaloceanspaces.com/similar_images/5/72d/e35e63153d0e0f7677aba0619faa281dbe859.jpg",
+              "license_name": "CC BY-NC-SA 4.0",
+              "license_url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+              "citation": "FlowerChecker s.r.o.",
+              "similarity": 0.459,
+              "url_small": "https://plant-id.ams3.cdn.digitaloceanspaces.com/similar_images/5/72d/e35e63153d0e0f7677aba0619faa281dbe859.small.jpg"
+            }
+          ],
+          "details": {
+            "language": "en",
+            "entity_id": "edebdcd974b11e08"
+          }
+        },
+        {
+          "id": "f22fbc7e877b750d",
+          "name": "nutrient deficiency",
+          "probability": 0.2495,
+          "similar_images": [
+            {
+              "id": "92f3f366fbc861ee52ba620955d01b960cfc06be",
+              "url": "https://plant-id.ams3.cdn.digitaloceanspaces.com/similar_images/5/92f/3f366fbc861ee52ba620955d01b960cfc06be.jpg",
+              "license_name": "CC BY-NC-SA 4.0",
+              "license_url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+              "citation": "FlowerChecker s.r.o.",
+              "similarity": 0.493,
+              "url_small": "https://plant-id.ams3.cdn.digitaloceanspaces.com/similar_images/5/92f/3f366fbc861ee52ba620955d01b960cfc06be.small.jpg"
+            },
+            {
+              "id": "0b1b1c15920bcc2f659db740e3174b58795419cb",
+              "url": "https://plant-id.ams3.cdn.digitaloceanspaces.com/similar_images/5/0b1/b1c15920bcc2f659db740e3174b58795419cb.jpg",
+              "license_name": "CC BY-NC-SA 4.0",
+              "license_url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+              "citation": "FlowerChecker s.r.o.",
+              "similarity": 0.467,
+              "url_small": "https://plant-id.ams3.cdn.digitaloceanspaces.com/similar_images/5/0b1/b1c15920bcc2f659db740e3174b58795419cb.small.jpg"
+            }
+          ],
+          "details": {
+            "language": "en",
+            "entity_id": "f22fbc7e877b750d"
+          }
+        }
+      ],
+      "question": {
+        "text": "Are the leaves soft, limp, or drooping?",
+        "translation": "Are the leaves soft, limp, or drooping?",
+        "options": {
+          "yes": {
+            "suggestion_index": 0,
+            "entity_id": "edebdcd974b11e08",
+            "name": "water deficiency",
+            "translation": "Yes"
+          },
+          "no": {
+            "suggestion_index": 1,
+            "entity_id": "f22fbc7e877b750d",
+            "name": "nutrient deficiency",
+            "translation": "No"
+          }
+        }
+      }
+    },
+    "is_healthy": {
+      "binary": false,
+      "probability": 0.04270000010728836,
+      "threshold": 0.5
+    }
+  },
+  "status": "COMPLETED",
+  "sla_compliant_client": true,
+  "sla_compliant_system": true,
+  "created": 1777370218.182148,
+  "completed": 1777370218.788098
+}
